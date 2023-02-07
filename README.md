@@ -3,7 +3,7 @@
 A very simple, low cost, low power, utility that comes in handy for getting the data of your meter
 in a convenient way.
 
-A RP2 pico is used to read a Logarex-LK13BE80333 Power meter with a TTL IR-sensor (Volkszähler) 
+A RP2 pico W is used to read a Logarex-LK13BE80333 Power meter with a TTL IR-sensor (Volkszähler) 
 
 IR-Schreib-Lesekopf, TTL-Interface
 https://wiki.volkszaehler.org/hardware/controllers/ir-schreib-lesekopf-ttl-ausgang
