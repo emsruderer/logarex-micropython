@@ -20,6 +20,7 @@ It provides:
 - week consumption (7d))
 - month consumtion (30d)
 - year consumption (365d)
+- the current meter reading (total)
 - L1,L2,L3 data Volts and Amp
 
 REMARK: you must know the PIN of the power meter and the meter must be set free, 
