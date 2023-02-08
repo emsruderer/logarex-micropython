@@ -16,9 +16,6 @@ log.setLevel(logging.INFO)
 def reset():
     machine.reset()
 
-ssid = 'LS22Box'
-password = '00829806627728286690'
-
 wlan = wlan.Wifi()
 
 serial = UART(1, baudrate=9600, bits=8, parity=None, stop=1, tx=Pin(4), rx=Pin(5))
@@ -47,6 +44,7 @@ def read_data():
 
           time.sleep_ms(100)
           if STOP: return
+      return
      
 def get_data():
     try:
@@ -87,7 +85,7 @@ def processdata(lijst):
         elif value.startswith('1-0:1.8.0*98'):
             meting['30-days'] = value.split('(')[1].split('*')[0]
         elif value.startswith('1-0:1.8.0*99'):
-            meting['365-dys'] = value.split('(')[1].split('*')[0]
+            meting['365-days'] = value.split('(')[1].split('*')[0]
         elif value.startswith('1-0:1.8.0*100'):
             meting['Total'] = value.split('(')[1].split('*')[0]
         elif value.startswith('1-0:32.7.0'):
@@ -135,17 +133,17 @@ def make_html(d):
         </style>
         <title>Logarex stroommeter</title>
         </head>
-        <body><h1>Logarex stroommeter</h1>
+        <body><h1>Logarex Power Meter</h1>
             <table>
-            <tr><th align="left">Periode</th><th align="right">Verbruik</th><th align="left">Eenheid</th></tr>
+            <tr><th align="left">Period</th><th align="right">Quantity</th><th align="left">Unit</th></tr>
     '''
     html_r = ('<tr><td>Now</td><td align="right">' + d['Now'] + '</td><td>Watt</td></tr>'
     +  '<tr><td>Grid</td><td align="right">' + d['Grid'] + '</td><td>kWh</td></tr>'
     +  '<tr><td>Day</td><td align="right">' + d['Day'] + '</td><td>kWh</td></tr>'
-    +  '<tr><td>7-days</td><td align="right">' + d['7-days'] + '</td><td>kWh</td></tr>'
+    +  '<tr><td>7--days</td><td align="right">' + d['7-days'] + '</td><td>kWh</td></tr>'
     +  '<tr><td>30-days</td><td align="right">' + d['30-days'] + '</td><td>kWh</td></tr>'
-    +  '<tr><td>365-days</td><td align="right">' + d['365-days'] + '</td><td>kWh</td></tr>'
-    +  '<tr><td>Toal</td><td align="right">' + d['Total'] + '</td><td>kWh</td></tr>'
+    +  '<tr><td>365days</td><td align="right">' + d['365-days'] + '</td><td>kWh</td></tr>'
+    +  '<tr><td>Total</td><td align="right">' + d['Total'] + '</td><td>kWh</td></tr>'
     +  '<tr><td>L1-Volt</td><td align="right">' + d['L1-Volt'] + '</td><td>Volt</td></tr>'
     +  '<tr><td>L2-Volt</td><td align="right">' + d['L2-Volt'] + '</td><td>Volt</td></tr>'
     +  '<tr><td>L3-Volt</td><td align="right">' + d['L3-Volt'] + '</td><td>Volt</td></tr>'
@@ -175,30 +173,39 @@ except OSError as ex:
 log.info('listening on'+ str(addr))
 
 try:
-    _thread.start_new_thread(read_data, ())
+    reader = _thread.start_new_thread(read_data, ())
 except:
     sys.exit(1)
 
 # Listen for connections
 while True:
     try:
-        cl, addr = s.accept()
+        client, addr = s.accept()
         t = time.localtime()
-        log.info(f"client connected from {addr} GMT {t[4]}:{t[5]}:{t[6]}")
-        cl_file = cl.makefile('rwb', 0)
-        while True:
+        log.info(f"client connected from {addr} GMT {t[3]}:{t[4]}:{t[5]}")
+        cl_file = client.makefile('rwb', 0)
+        late = time.ticks_us() + 10000 # us
+        while time.ticks_us() < late:
             line = cl_file.readline()
             if not line or line == b'\r\n':
                 break
         response = make_html(processdata(get_data()))
         log.debug(response)
-        cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-        cl.send(response)
-        cl.close()
+        client.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+        client.send(response)
+        client.close()
     except KeyboardInterrupt:  # OSError as e:
         STOP = True
-        s.close()
+        reader.exit()
+        client.close()
         wlan.disconnect()
         sys.exit(1)
+    except UnicodeError as ex:
+        log.exception(ex,"UnicodeError in socket-loop")
+    except OSError as ex:
+        log.exception(ex,"OSError")
+        raise SystemExit
+    except Exception as ex:
+        log.exception(ex,"Exception in socket-loop")
     finally:
         log.info('connection closed')

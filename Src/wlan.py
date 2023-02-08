@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.DEBUG,filename='logger.log')
+#logging.basicConfig(level=logging.DEBUG,filename='logger.log')
 logger = logging.getLogger("wlan","wlan.log")
 logger.setLevel(logging.INFO)
 
@@ -15,6 +15,7 @@ import ubinascii
 
 SSID = "LocalNetwork"
 PASSWORD = "Password"
+
 
 LINK_DOWN = 0
 LINK_JOIN = 1
