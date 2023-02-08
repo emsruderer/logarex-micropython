@@ -1,6 +1,6 @@
 import logging
-#logger = logging.getLogger("wlan","wlan.log")
-logger = logging.getLogger("wlan")
+logging.basicConfig(level=logging.DEBUG,filename='logger.log')
+logger = logging.getLogger("wlan","wlan.log")
 logger.setLevel(logging.INFO)
 
 from machine import UART, Pin, RTC, Timer
@@ -13,7 +13,7 @@ import sys
 import struct
 import ubinascii
 
-SSID = "local_network"
+SSID = "LocalNetwork"
 PASSWORD = "Password"
 
 LINK_DOWN = 0
@@ -27,7 +27,7 @@ LINK_BADAUTH = -3
 # set the wlan to your country, here Germany
 rp2.country("DE")
 
-HEARTBEAT = False
+HEARTBEAT = True
 
 rtc = RTC()
 

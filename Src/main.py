@@ -9,8 +9,8 @@ import ubinascii
 import logging
 import wlan
 
-#log = logging.getLogger("logger","logger.log")
-log = logging.getLogger("logger")
+log = logging.getLogger("logger","logger.log")
+#log = logging.getLogger("logger")
 log.setLevel(logging.INFO)
 
 def reset():
