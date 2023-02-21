@@ -29,14 +29,10 @@ baton = _thread.allocate_lock()
 
 def read_data():
       global STOP
-      end_wait_time = time.ticks_us() + 100000 #(us)
       while not STOP:
+
           while serial.any() == 0:
-              time.sleep_us(10)
-              if time.ticks_us() > end_wait_time:
-                  log.debug('time_out_read_data')
-                  break
-              continue
+              time.sleep_ms(10)
               
           baton.acquire()
           lgt = serial.readinto(data)
@@ -50,11 +46,13 @@ def get_data():
     try:
         baton.acquire()
         data_str = str(data,"utf-8")
+        log.debug(data_str)
         baton.release()
         data_lst = data_str.splitlines()
         return data_lst
-    except UnicodeError as err:
-        log.exception(err,"UnicodeError")
+    except Excepion as err:
+        log.exception(err,"exception in get_data")
+        return None
 
 def processdata(lijst):
     meting = {
@@ -72,7 +70,7 @@ def processdata(lijst):
         'L2-Amp' : '1.0',
         'L3-Amp' : '1.0'
     }
-    if lijst != None:
+    if lijst != None and len(lijst) >= 13:
       for value in lijst:
         if value.startswith('1-0:16.7.0'):
             meting['Now'] = value.split('(')[1].split('*')[0]
@@ -100,10 +98,19 @@ def processdata(lijst):
             meting['L2-Amp'] = value.split('(')[1].split('*')[0]
         elif value.startswith('1-0:51.7.0'):
             meting['L3-Amp'] = value.split('(')[1].split('*')[0]
+
         for key in meting:
             if meting[key].find('0')>=0 :
-                log.debug("found:"+ str(meting[key]))
-                meting[key] = meting[key].lstrip('0')
+               meting[key] = meting[key].lstrip('0')
+            if meting[key].find('-')>=0:
+               meting[key] = '-' + meting[key][1:].lstrip('0')
+            #"""
+            if key == "Grid":
+                hs = meting["Grid"]
+                pp = hs.rfind('.') 
+                if pp > 0:
+                  meting["Grid"]= hs[:pp+2] # round to 1 decimal
+            #"""
     return meting
 
 
@@ -131,11 +138,11 @@ def make_html(d):
                     
            }
         </style>
-        <title>Logarex stroommeter</title>
+        <title>Logarex Power Meter</title>
         </head>
         <body><h1>Logarex Power Meter</h1>
             <table>
-            <tr><th align="left">Period</th><th align="right">Quantity</th><th align="left">Unit</th></tr>
+            <tr><th align="left">Period</th><th align="right">Use</th><th align="left">Unit</th></tr>
     '''
     html_r = ('<tr><td>Now</td><td align="right">' + d['Now'] + '</td><td>Watt</td></tr>'
     +  '<tr><td>Grid</td><td align="right">' + d['Grid'] + '</td><td>kWh</td></tr>'
@@ -168,44 +175,52 @@ except OSError as ex:
     s.close()
     log.exception(ex,'Socket exception')
     wlan.disconnect()
-    #reset()
+    #machine.soft_reset()
+    raise SystemExit
     
 log.info('listening on'+ str(addr))
 
 try:
     reader = _thread.start_new_thread(read_data, ())
+    log.info('Reader thread started')
 except:
-    sys.exit(1)
+    log.info('Reading thread did not start')
+    raise SystemExit
 
 # Listen for connections
 while True:
+    log.info("HTML-Server while loop started")
     try:
-        client, addr = s.accept()
+        log.info("waiting for a client")
+        cl, addr = s.accept()
         t = time.localtime()
         log.info(f"client connected from {addr} GMT {t[3]}:{t[4]}:{t[5]}")
-        cl_file = client.makefile('rwb', 0)
-        late = time.ticks_us() + 10000 # us
-        while time.ticks_us() < late:
+        cl_file = cl.makefile('rwb', 0)
+        while True:
             line = cl_file.readline()
             if not line or line == b'\r\n':
-                break
-        response = make_html(processdata(get_data()))
+                 break
+        meting = processdata(get_data())
+        response = make_html(meting)
         log.debug(response)
-        client.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-        client.send(response)
-        client.close()
+        cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+        cl.send(response)
+        cl.close()
     except KeyboardInterrupt:  # OSError as e:
         STOP = True
         reader.exit()
-        client.close()
+        cl.close()
         wlan.disconnect()
         sys.exit(1)
     except UnicodeError as ex:
         log.exception(ex,"UnicodeError in socket-loop")
     except OSError as ex:
         log.exception(ex,"OSError")
-        raise SystemExit
+        #raise SystemExit
     except Exception as ex:
         log.exception(ex,"Exception in socket-loop")
+    except BaseException as ex:
+        log.exception(ex,"Error in socket-loop")
     finally:
+        cl.close()
         log.info('connection closed')

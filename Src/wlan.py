@@ -1,5 +1,5 @@
 import logging
-#logging.basicConfig(level=logging.DEBUG,filename='logger.log')
+logging.basicConfig(level=logging.DEBUG,filename='logger.log')
 logger = logging.getLogger("wlan","wlan.log")
 logger.setLevel(logging.INFO)
 
@@ -13,8 +13,10 @@ import sys
 import struct
 import ubinascii
 
-SSID = "LocalNetwork"
-PASSWORD = "Password"
+#SSID = "LocalNetwork"
+#PASSWORD = "Password"
+SSID = 'LocalNetwork'
+PASSWORD = 'PASSWORD'
 
 
 LINK_DOWN = 0
